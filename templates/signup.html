@@ -1,0 +1,29 @@
+{{ define "content" }}
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <h2 class="text-center mb-4">Create an Account</h2>
+                <form method="POST" action="/users">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Full Name</label>
+                        <input type="text" class="form-control" id="name" name="name" placeholder="Enter your full name" required value="{{.Name}}" {{if not .Name}}autofocus{{end}}>
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email address</label>
+                        <input type="email" class="form-control" id="email" name="email" placeholder="Enter your email" required value="{{.Email}}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password" placeholder="Create a password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirmPassword" class="form-label">Confirm Password</label>
+                        <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" placeholder="Confirm your password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Sign Up</button>
+                </form>
+                <p class="text-center mt-3">Already have an account? <a href="/signin">Sign In</a></p>
+            </div>
+        </div>
+    </div>
+{{ end }}
