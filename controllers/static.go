@@ -6,7 +6,7 @@ import (
 
 func StaticHandler(t template) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		t.Execute(w, nil)
+		t.Execute(w, r, nil)
 	}
 }
 
@@ -25,6 +25,6 @@ func FAQ(t template) http.HandlerFunc {
 		},
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
-		t.Execute(w, questions)
+		t.Execute(w, r, questions)
 	}
 }

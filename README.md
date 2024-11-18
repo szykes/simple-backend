@@ -6,3 +6,5 @@ https://github.com/bokwoon95/wgo
 
 wgo v0.5.6
 wgo run -file=.html .
+
+log package used instead of fmt for logging

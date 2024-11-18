@@ -1,0 +1,10 @@
+services:
+  db:
+    image: postgres:17.1-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: some-pass
+      POSTGRES_DB: szykes
+    ports:
+      - 5432:5432
