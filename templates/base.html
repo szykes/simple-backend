@@ -29,7 +29,8 @@
                   <!-- Show Sign In/Sign Up or Sign Out based on user state -->
                   <!-- TODO -->
                     {{ if user }}
-                        <form method="POST" action="/logout" class="d-inline">
+                        <form method="POST" action="/signout" class="d-inline">
+                            {{csrfField}}
                             <button type="submit" class="btn btn-outline-danger">Sign Out</button>
                         </form>
                     {{ else }}

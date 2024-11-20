@@ -11,3 +11,6 @@ log package used instead of fmt for logging
 
 
 go install github.com/pressly/goose/v3/cmd/goose@v3
+
+goose create password_reset sql
+goose fix

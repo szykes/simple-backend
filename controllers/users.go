@@ -11,11 +11,15 @@ import (
 
 type Users struct {
 	Templates struct {
-		New    template
-		SignIn template
+		New            template
+		SignIn         template
+		ForgotPassword template
+		CheckYourEmail template
+		ResetPassword  template
 	}
-	UserService    *models.UserService
-	SessionService *models.SessionService
+	UserService          *models.UserService
+	SessionService       *models.SessionService
+	PasswordResetService *models.PasswordResetService
 }
 
 func (u *Users) New(w http.ResponseWriter, r *http.Request) {
@@ -118,6 +122,93 @@ func (u *Users) ProcessSignOut(w http.ResponseWriter, r *http.Request) {
 
 	deleteCookie(w, CookieSessionName)
 	http.Redirect(w, r, "/signin", http.StatusFound)
+}
+
+func (u *Users) ForgetPassword(w http.ResponseWriter, r *http.Request) {
+	data := struct {
+		Email string
+	}{
+		Email: r.FormValue("email"),
+	}
+	u.Templates.ForgotPassword.Execute(w, r, data)
+}
+
+func (u *Users) ProcessForgetPassword(w http.ResponseWriter, r *http.Request) {
+	data := struct {
+		Email     string
+		ResetLink string
+	}{
+		Email: r.FormValue("email"),
+	}
+	pwReset, err := u.PasswordResetService.Create(context.Background(), data.Email)
+	if err != nil {
+		// TODO: what if the user does not exist?
+		fmt.Println(err)
+		http.Error(w, "Internal error", http.StatusInternalServerError)
+		return
+	}
+	// TODO: change to localhost
+	data.ResetLink = "http://192.168.1.2:3000/reset-password?token=" + pwReset.Token
+	// TODO: here should be the emailing part
+
+	u.Templates.CheckYourEmail.Execute(w, r, data)
+	// 	fmt.Fprint(w, `
+	// Subject: Reset your password
+	// To: `+data.Email+`
+	// Body: <p>To reset your passowrd, please visit the following link: <a href"`+pwReset+`">`+pwReset+`</a></p>`)
+	// TODO: print this info
+
+}
+
+func (u *Users) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	data := struct {
+		Token string
+	}{
+		Token: r.FormValue("token"),
+	}
+	u.Templates.ResetPassword.Execute(w, r, data)
+}
+
+func (u *Users) ProcessResetPassword(w http.ResponseWriter, r *http.Request) {
+	data := struct {
+		Token           string
+		Password        string
+		ConfirmPassword string
+	}{
+		Token:           r.FormValue("token"),
+		Password:        r.FormValue("newPassword"),
+		ConfirmPassword: r.FormValue("confirmPassword"),
+	}
+
+	// TODO: is this ok?
+	if data.Password != data.ConfirmPassword {
+		fmt.Println("reset password: mismatching password")
+		return
+	}
+
+	user, err := u.PasswordResetService.Consume(context.Background(), data.Token)
+	if err != nil {
+		fmt.Println(err)
+		http.Error(w, "Internal error", http.StatusInternalServerError)
+		return
+	}
+
+	err = u.UserService.UpdatePassword(context.Background(), user.ID, data.Password)
+	if err != nil {
+		fmt.Println(err)
+		http.Error(w, "Internal error", http.StatusInternalServerError)
+		return
+	}
+
+	session, err := u.SessionService.Create(context.Background(), user.ID)
+	if err != nil {
+		fmt.Println(err)
+		http.Redirect(w, r, "/signin", http.StatusFound)
+		return
+	}
+
+	setCookie(w, CookieSessionName, session.Token)
+	http.Redirect(w, r, "/users/me", http.StatusFound)
 }
 
 type UserMiddleware struct {

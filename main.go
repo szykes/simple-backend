@@ -37,6 +37,9 @@ func main() {
 	sessionService := models.SessionService{
 		DB: db,
 	}
+	passwordResetService := models.PasswordResetService{
+		DB: db,
+	}
 
 	// setup middleware
 	userMw := controllers.UserMiddleware{
@@ -48,11 +51,15 @@ func main() {
 
 	// setup contollers
 	users := controllers.Users{
-		UserService:    &userService,
-		SessionService: &sessionService,
+		UserService:          &userService,
+		SessionService:       &sessionService,
+		PasswordResetService: &passwordResetService,
 	}
 	users.Templates.New = views.MustParseFS(templates.FS, "base.html", "signup.html")
 	users.Templates.SignIn = views.MustParseFS(templates.FS, "base.html", "signin.html")
+	users.Templates.ForgotPassword = views.MustParseFS(templates.FS, "base.html", "forgot-password.html")
+	users.Templates.CheckYourEmail = views.MustParseFS(templates.FS, "base.html", "check-your-email.html")
+	users.Templates.ResetPassword = views.MustParseFS(templates.FS, "base.html", "reset-password.html")
 
 	// setup router
 	r := chi.NewRouter()
@@ -76,14 +83,15 @@ func main() {
 	r.Get("/signin", users.SignIn)
 	r.Post("/signin", users.ProcessSignIn)
 	r.Post("/signout", users.ProcessSignOut)
+	r.Get("/forgot-password", users.ForgetPassword)
+	r.Post("/forgot-password", users.ProcessForgetPassword)
+	r.Get("/reset-password", users.ResetPassword)
+	r.Post("/reset-password", users.ProcessResetPassword)
 
 	r.Route("/users/me", func(r chi.Router) {
 		r.Use(userMw.RequireUser)
 		r.Get("/", users.CurrentUser)
 	})
-
-	t = views.MustParseFS(templates.FS, "base.html", "forgot-password.html")
-	r.Get("/forgot-password", controllers.StaticHandler(t))
 
 	r.Get("/joke ", func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusTeapot), http.StatusTeapot)

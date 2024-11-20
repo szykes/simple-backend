@@ -1,0 +1,29 @@
+{{ define "content" }}
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                <h2 class="text-center mb-4">Check Your Email</h2>
+                <p class="text-center text-muted">
+                    We’ve sent an email with instructions to reset your password. Here’s what it looks like:
+                </p>
+                <div class="card shadow-sm mt-4">
+                    <div class="card-header bg-primary text-white">
+                        <strong>Email Preview</strong>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Subject:</strong> Reset your password</p>
+                        <p><strong>To:</strong> {{ .Email }}</p>
+                        <p><strong>Body:</strong></p>
+                        <blockquote class="bg-light p-3 rounded border">
+                            To reset your password, please visit the following link: <br>
+                            <a href="{{ .ResetLink }}">{{ .ResetLink }}</a>
+                        </blockquote>
+                    </div>
+                </div>
+                <div class="text-center mt-4">
+                    <a href="/" class="btn btn-primary">Back to Home</a>
+                </div>
+            </div>
+        </div>
+    </div>
+{{ end }}
