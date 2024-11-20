@@ -3,8 +3,10 @@ package models
 import (
 	"database/sql"
 	"fmt"
+	"io/fs"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/pressly/goose/v3"
 )
 
 type PostgresCfg struct {
@@ -37,4 +39,25 @@ func Open(cfg PostgresCfg) (*sql.DB, error) {
 		return nil, fmt.Errorf("open %w", err)
 	}
 	return db, nil
+}
+
+func Migrate(db *sql.DB, dir string) error {
+	err := goose.SetDialect("postgres")
+	if err != nil {
+		return fmt.Errorf("migrate: %w", err)
+	}
+	err = goose.Up(db, dir)
+	if err != nil {
+		return fmt.Errorf("migrate: %w", err)
+	}
+	return nil
+}
+
+func MigrateFS(db *sql.DB, migrations fs.FS, dir string) error {
+	goose.SetBaseFS(migrations)
+	defer func() {
+		goose.SetBaseFS(nil)
+	}()
+
+	return Migrate(db, dir)
 }

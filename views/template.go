@@ -10,6 +10,8 @@ import (
 	"net/http"
 
 	"github.com/gorilla/csrf"
+	"github.com/szykes/simple-backend/custctx"
+	"github.com/szykes/simple-backend/models"
 )
 
 type Template struct {
@@ -20,6 +22,9 @@ func MustParseFS(fs fs.FS, patterns ...string) *Template {
 	t := template.New(patterns[0])
 	t = t.Funcs(template.FuncMap{
 		"csrfField": func() (template.HTML, error) {
+			return "", fmt.Errorf("not implemented")
+		},
+		"user": func() (template.HTML, error) {
 			return "", fmt.Errorf("not implemented")
 		},
 	})
@@ -44,6 +49,9 @@ func (t *Template) Execute(w http.ResponseWriter, r *http.Request, data any) {
 	tpl = tpl.Funcs(template.FuncMap{
 		"csrfField": func() template.HTML {
 			return csrf.TemplateField(r)
+		},
+		"user": func() *models.User {
+			return custctx.User(r.Context())
 		},
 	})
 

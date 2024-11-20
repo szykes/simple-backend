@@ -10,16 +10,57 @@ import (
 	"github.com/gorilla/csrf"
 
 	"github.com/szykes/simple-backend/controllers"
+	"github.com/szykes/simple-backend/migrations"
 	"github.com/szykes/simple-backend/models"
 	"github.com/szykes/simple-backend/templates"
 	"github.com/szykes/simple-backend/views"
 )
 
 func main() {
+	// setup DB
+	cfg := models.DefaultPostgresCfg()
+	db, err := models.Open(cfg)
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	err = models.MigrateFS(db, migrations.FS, ".")
+	if err != nil {
+		panic(err)
+	}
+
+	// setup services
+	userService := models.UserService{
+		DB: db,
+	}
+	sessionService := models.SessionService{
+		DB: db,
+	}
+
+	// setup middleware
+	userMw := controllers.UserMiddleware{
+		SessionService: &sessionService,
+	}
+
+	csrfKey := []byte("ashlKfD8U8ui3xAfLk78Jh10AslKuHbH")
+	csrfMw := csrf.Protect(csrfKey, csrf.Path("/"), csrf.Secure(false))
+
+	// setup contollers
+	users := controllers.Users{
+		UserService:    &userService,
+		SessionService: &sessionService,
+	}
+	users.Templates.New = views.MustParseFS(templates.FS, "base.html", "signup.html")
+	users.Templates.SignIn = views.MustParseFS(templates.FS, "base.html", "signin.html")
+
+	// setup router
 	r := chi.NewRouter()
 
 	r.Use(middleware.Logger)
 	r.Use(middleware.Timeout(60 * time.Second))
+	r.Use(csrfMw)
+	r.Use(userMw.SetUser)
 
 	t := views.MustParseFS(templates.FS, "base.html", "home.html")
 	r.Get("/", controllers.StaticHandler(t))
@@ -30,27 +71,16 @@ func main() {
 	t = views.MustParseFS(templates.FS, "base.html", "faq.html")
 	r.Get("/faq", controllers.FAQ(t))
 
-	cfg := models.DefaultPostgresCfg()
-	db, err := models.Open(cfg)
-	if err != nil {
-		panic(err)
-	}
-	defer db.Close()
-
-	us := models.UserService{
-		DB: db,
-	}
-
-	users := controllers.Users{
-		UserService: &us,
-	}
-	users.Templates.New = views.MustParseFS(templates.FS, "base.html", "signup.html")
-	users.Templates.SignIn = views.MustParseFS(templates.FS, "base.html", "signin.html")
 	r.Get("/signup", users.New)
 	r.Post("/users", users.Create)
 	r.Get("/signin", users.SignIn)
 	r.Post("/signin", users.ProcessSignIn)
-	r.Get("/users/me", users.CurrentUser)
+	r.Post("/signout", users.ProcessSignOut)
+
+	r.Route("/users/me", func(r chi.Router) {
+		r.Use(userMw.RequireUser)
+		r.Get("/", users.CurrentUser)
+	})
 
 	t = views.MustParseFS(templates.FS, "base.html", "forgot-password.html")
 	r.Get("/forgot-password", controllers.StaticHandler(t))
@@ -63,37 +93,10 @@ func main() {
 		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 	})
 
-	csrfKey := []byte("ashlKfD8U8ui3xAfLk78Jh10AslKuHbH")
-	csrfMw := csrf.Protect(csrfKey, csrf.Secure(false))
-
+	// start webserver
 	fmt.Println("Starting server on :3000")
-	err = http.ListenAndServe(":3000", csrfMw(r))
+	err = http.ListenAndServe(":3000", r)
 	if err != nil {
 		panic(err)
 	}
 }
-
-//  	defer db.Close()
-// 	err = db.Ping()
-// 	if err != nil {
-// 		return nil, fmt.Errorf("open %w", err)
-// 	}
-
-// _, err = db.Exec(`
-// CREATE TABLE IF NOT EXISTS users (
-// id SERIAL PRIMARY KEY,
-// name TEXT,
-// email Text UNIQUE NOT NULL
-// );
-
-// CREATE TABLE IF NOT EXISTS orders (
-// id SERIAL PRIMARY KEY,
-// user_id INT NOT NULL,
-// amount INT,
-// description TEXT
-// );
-// `)
-
-// 	if err != nil {
-// 		panic(err)
-// 	}

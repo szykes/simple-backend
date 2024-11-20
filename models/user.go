@@ -45,7 +45,8 @@ func (u *UserService) Create(ctx context.Context, newUser NewUser) (*User, error
 
 	row := u.DB.QueryRowContext(ctx, `
     INSERT INTO users (name, email, password_hash)
-    VALUES ($1, $2, $3) RETURNING id;`,
+    VALUES ($1, $2, $3)
+    RETURNING id;`,
 		user.Name, user.Email, user.PasswordHash)
 	err = row.Scan(&user.ID)
 	if err != nil {
@@ -61,7 +62,9 @@ func (u *UserService) Authenticate(ctx context.Context, email, password string) 
 		Email: email,
 	}
 	row := u.DB.QueryRowContext(ctx, `
-    SELECT id, password_hash FROM users WHERE email=$1;`,
+    SELECT id, password_hash
+    FROM users
+    WHERE email=$1;`,
 		email)
 	err := row.Scan(&user.ID, &user.PasswordHash)
 	if err != nil {
