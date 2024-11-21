@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/szykes/simple-backend/custctx"
+	"github.com/szykes/simple-backend/errors"
 	"github.com/szykes/simple-backend/models"
 )
 
@@ -36,16 +37,20 @@ func (u *Users) New(w http.ResponseWriter, r *http.Request) {
 // TODO: introduce conxtext
 func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 	newUser := models.NewUser{
-		Name:         r.FormValue("name"),
-		Email:        r.FormValue("email"),
-		Password:     r.FormValue("password"),
-		PasswordConf: r.FormValue("confirmPassword"),
+		Name:            r.FormValue("name"),
+		Email:           r.FormValue("email"),
+		Password:        r.FormValue("password"),
+		ConfirmPassword: r.FormValue("confirmPassword"),
 	}
 	user, err := u.UserService.Create(context.Background(), newUser)
 	if err != nil {
+		if errors.Is(err, models.ErrEmailTaken) {
+			err = errors.Public(err, "That email address is already associated with an account.")
+		}
+		u.Templates.New.Execute(w, r, newUser, err)
 		// TODO: proper error logging and don't use fmt.Println
-		fmt.Println(err)
-		http.Error(w, "Internal error", http.StatusInternalServerError)
+		// fmt.Println(err)
+		// http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
 

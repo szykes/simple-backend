@@ -6,7 +6,14 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/szykes/simple-backend/errors"
 	"golang.org/x/crypto/bcrypt"
+)
+
+var (
+	ErrEmailTaken = errors.New("models: email address is already in use")
 )
 
 type User struct {
@@ -21,10 +28,10 @@ type UserService struct {
 }
 
 type NewUser struct {
-	Name         string
-	Email        string
-	Password     string
-	PasswordConf string
+	Name            string
+	Email           string
+	Password        string
+	ConfirmPassword string
 }
 
 func (u *UserService) Create(ctx context.Context, newUser NewUser) (*User, error) {
@@ -32,7 +39,7 @@ func (u *UserService) Create(ctx context.Context, newUser NewUser) (*User, error
 	user.Name = newUser.Name
 	user.Email = strings.ToLower(newUser.Email)
 
-	if newUser.Password != newUser.PasswordConf {
+	if newUser.Password != newUser.ConfirmPassword {
 		// TODO: handling error correctly
 		return nil, fmt.Errorf("create user: mismatching password")
 	}
@@ -50,6 +57,12 @@ func (u *UserService) Create(ctx context.Context, newUser NewUser) (*User, error
 		user.Name, user.Email, user.PasswordHash)
 	err = row.Scan(&user.ID)
 	if err != nil {
+		var pgError *pgconn.PgError
+		if errors.As(err, &pgError) {
+			if pgError.Code == pgerrcode.UniqueViolation {
+				return nil, ErrEmailTaken
+			}
+		}
 		return nil, fmt.Errorf("create user: %w", err)
 	}
 

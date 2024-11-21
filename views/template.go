@@ -2,6 +2,7 @@ package views
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"html/template"
 	"io"
@@ -13,6 +14,10 @@ import (
 	"github.com/szykes/simple-backend/custctx"
 	"github.com/szykes/simple-backend/models"
 )
+
+type publicErorr interface {
+	Public() string
+}
 
 type Template struct {
 	htmlTemplate *template.Template
@@ -27,6 +32,9 @@ func MustParseFS(fs fs.FS, patterns ...string) *Template {
 		"user": func() (template.HTML, error) {
 			return "", fmt.Errorf("not implemented")
 		},
+		"errors": func() (template.HTML, error) {
+			return "", fmt.Errorf("not implemented")
+		},
 	})
 
 	t, err := t.ParseFS(fs, patterns...)
@@ -39,7 +47,7 @@ func MustParseFS(fs fs.FS, patterns ...string) *Template {
 	}
 }
 
-func (t *Template) Execute(w http.ResponseWriter, r *http.Request, data any) {
+func (t *Template) Execute(w http.ResponseWriter, r *http.Request, data any, errs ...error) {
 	tpl, err := t.htmlTemplate.Clone()
 	if err != nil {
 		log.Printf("cloning template: %v", err)
@@ -52,6 +60,19 @@ func (t *Template) Execute(w http.ResponseWriter, r *http.Request, data any) {
 		},
 		"user": func() *models.User {
 			return custctx.User(r.Context())
+		},
+		"errors": func() []string {
+			var errMsgs []string
+			for _, err := range errs {
+				var pubErr publicErorr
+				if errors.As(err, &pubErr) {
+					errMsgs = append(errMsgs, pubErr.Public())
+				} else {
+					log.Println(err)
+					errMsgs = append(errMsgs, "Internal error.")
+				}
+			}
+			return errMsgs
 		},
 	})
 

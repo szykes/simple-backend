@@ -26,8 +26,7 @@
                     </li>
                 </ul>
                 <div class="d-flex">
-                  <!-- Show Sign In/Sign Up or Sign Out based on user state -->
-                  <!-- TODO -->
+                    <!-- Show Sign In/Sign Up or Sign Out based on user state -->
                     {{ if user }}
                         <form method="POST" action="/signout" class="d-inline">
                             {{csrfField}}
@@ -41,6 +40,18 @@
             </div>
         </div>
     </nav>
+
+    <!-- Alert Banners -->
+    {{ if errors }}
+        <div class="container mt-3">
+            {{ range errors }}
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    {{ . }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {{ end }}
+        </div>
+    {{ end }}
 
     <!-- Content Section -->
     <div class="container mt-4">
