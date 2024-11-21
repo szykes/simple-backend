@@ -64,7 +64,7 @@ func (g *GalleryService) ByUserID(ctx context.Context, userID int) ([]Gallery, e
     WHERE user_id = $1;`,
 		userID)
 	if err != nil {
-		fmt.Errorf("query galleries by user: %w", err)
+		return nil, fmt.Errorf("query galleries by user: %w", err)
 	}
 
 	// TODO: is it ok?

@@ -69,6 +69,8 @@ func main() {
 	}
 	galleries.Templates.New = views.MustParseFS(templates.FS, "base.html", "galleries_new.html")
 	galleries.Templates.Edit = views.MustParseFS(templates.FS, "base.html", "galleries_edit.html")
+	galleries.Templates.Index = views.MustParseFS(templates.FS, "base.html", "galleries_index.html")
+	galleries.Templates.Show = views.MustParseFS(templates.FS, "base.html", "galleries_show.html")
 
 	// setup router
 	r := chi.NewRouter()
@@ -103,12 +105,15 @@ func main() {
 	})
 
 	r.Route("/galleries", func(r chi.Router) {
+		r.Get("/{id}", galleries.Show)
 		r.Group(func(r chi.Router) {
 			r.Use(userMw.RequireUser)
+			r.Get("/", galleries.Index)
 			r.Get("/new", galleries.New)
 			r.Post("/", galleries.Create)
 			r.Get("/{id}/edit", galleries.Edit)
 			r.Post("/{id}", galleries.Update)
+			r.Post("/{id}/delete", galleries.Delete)
 		})
 	})
 

@@ -28,6 +28,7 @@
                 <div class="d-flex">
                     <!-- Show Sign In/Sign Up or Sign Out based on user state -->
                     {{ if user }}
+                        <a href="/galleries" class="btn btn-outline-secondary me-2">My Galleries</a>
                         <form method="POST" action="/signout" class="d-inline">
                             {{csrfField}}
                             <button type="submit" class="btn btn-outline-danger">Sign Out</button>
