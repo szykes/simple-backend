@@ -40,6 +40,9 @@ func main() {
 	passwordResetService := models.PasswordResetService{
 		DB: db,
 	}
+	galleryService := models.GalleryService{
+		DB: db,
+	}
 
 	// setup middleware
 	userMw := controllers.UserMiddleware{
@@ -60,6 +63,12 @@ func main() {
 	users.Templates.ForgotPassword = views.MustParseFS(templates.FS, "base.html", "forgot-password.html")
 	users.Templates.CheckYourEmail = views.MustParseFS(templates.FS, "base.html", "check-your-email.html")
 	users.Templates.ResetPassword = views.MustParseFS(templates.FS, "base.html", "reset-password.html")
+
+	galleries := controllers.Galleries{
+		GalleryService: &galleryService,
+	}
+	galleries.Templates.New = views.MustParseFS(templates.FS, "base.html", "galleries_new.html")
+	galleries.Templates.Edit = views.MustParseFS(templates.FS, "base.html", "galleries_edit.html")
 
 	// setup router
 	r := chi.NewRouter()
@@ -91,6 +100,16 @@ func main() {
 	r.Route("/users/me", func(r chi.Router) {
 		r.Use(userMw.RequireUser)
 		r.Get("/", users.CurrentUser)
+	})
+
+	r.Route("/galleries", func(r chi.Router) {
+		r.Group(func(r chi.Router) {
+			r.Use(userMw.RequireUser)
+			r.Get("/new", galleries.New)
+			r.Post("/", galleries.Create)
+			r.Get("/{id}/edit", galleries.Edit)
+			r.Post("/{id}", galleries.Update)
+		})
 	})
 
 	r.Get("/joke ", func(w http.ResponseWriter, r *http.Request) {
