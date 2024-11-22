@@ -9,8 +9,8 @@
             <div class="col-md-4">
                 <div class="card">
                     <!-- Make the image clickable, opening the full-size image -->
-                    <a href="{{ . }}" data-bs-toggle="lightbox" data-bs-target="#galleryImage" data-bs-title="Gallery Image">
-                        <img src="{{ . }}" class="card-img-top" alt="Gallery Image">
+                    <a href="/galleries/{{.GalleryID}}/images/{{.FilenameEscaped}}" data-bs-toggle="lightbox" data-bs-target="#galleryImage" data-bs-title="Gallery Image">
+                        <img src="/galleries/{{.GalleryID}}/images/{{.FilenameEscaped}}" class="card-img-top" alt="Gallery Image">
                     </a>
                 </div>
             </div>
