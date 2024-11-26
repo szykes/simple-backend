@@ -92,12 +92,12 @@ func main() {
 	r.Get("/signup", users.New)
 	r.Post("/users", users.Create)
 	r.Get("/signin", users.SignIn)
-	r.Post("/signin", users.ProcessSignIn)
-	r.Post("/signout", users.ProcessSignOut)
+	r.Post("/signin", users.DoSignIn)
+	r.Post("/signout", users.DoSignOut)
 	r.Get("/forgot-password", users.ForgetPassword)
-	r.Post("/forgot-password", users.ProcessForgetPassword)
+	r.Post("/forgot-password", users.DoForgetPassword)
 	r.Get("/reset-password", users.ResetPassword)
-	r.Post("/reset-password", users.ProcessResetPassword)
+	r.Post("/reset-password", users.DoResetPassword)
 
 	r.Route("/users/me", func(r chi.Router) {
 		r.Use(userMw.RequireUser)

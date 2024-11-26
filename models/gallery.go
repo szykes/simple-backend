@@ -68,9 +68,9 @@ func (g *GalleryService) ByID(ctx context.Context, id int) (*Gallery, error) {
 	err := row.Scan(&gallery.Title, &gallery.UserID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("query gallery by id: %w: ID: %v", ErrNotFound, id)
+			err = ErrNotFound
 		}
-		return nil, fmt.Errorf("query gallery by id: %w", err)
+		return nil, errors.Wrap(err, "query gallery by id", "ID", id)
 	}
 	return &gallery, nil
 }

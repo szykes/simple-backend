@@ -41,7 +41,9 @@ func (p *PasswordResetService) Create(ctx context.Context, email string) (*Passw
 `, email)
 	err := row.Scan(&userID)
 	if err != nil {
-		// TODO: what if the user does not exist?
+		if errors.Is(err, sql.ErrNoRows) {
+			err = ErrNotFound
+		}
 		return nil, errors.Wrap(err, "pwd reset create")
 	}
 

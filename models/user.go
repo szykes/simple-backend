@@ -75,6 +75,9 @@ func (u *UserService) Authenticate(ctx context.Context, email, password string) 
 		email)
 	err := row.Scan(&user.ID, &user.PasswordHash)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			err = ErrNotFound
+		}
 		return nil, errors.Wrap(err, "authenticate user")
 	}
 

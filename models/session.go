@@ -46,7 +46,6 @@ func (s *SessionService) Create(ctx context.Context, userID int) (*Session, erro
 	if err != nil {
 		return nil, errors.Wrap(err, "create session", "user ID", userID)
 	}
-
 	return &session, nil
 }
 
@@ -61,11 +60,9 @@ func (s *SessionService) User(ctx context.Context, token string) (*User, error) 
     WHERE sessions.token_hash = $1;`,
 		tokenHash)
 	err := row.Scan(&user.ID, &user.Name, &user.Email, &user.PasswordHash)
-	// TODO: implement no row case
 	if err != nil {
 		return nil, errors.Wrap(err, "create user session")
 	}
-
 	return &user, nil
 }
 

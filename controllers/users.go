@@ -43,19 +43,21 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	user, err := u.UserService.Create(r.Context(), newUser)
 	if err != nil {
-		if errors.Is(err, models.ErrEmailTaken) {
+		switch {
+		case errors.Is(err, models.ErrEmailTaken):
 			err = errors.Public(err, "That email address is already associated with an account.")
+		case errors.Is(err, models.ErrPwMismatch):
+			err = errors.Public(err, "The given passwords do not match.")
+		default:
+			log.Printf("ERROR: create user: %v\n", err.Error())
 		}
 		u.Templates.New.Execute(w, r, newUser, err)
-		log.Printf("ERROR: create user: %v\n", err.Error())
-		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	session, err := u.SessionService.Create(r.Context(), user.ID)
 	if err != nil {
 		log.Printf("DEBUG: create user: %v\n", err.Error())
-		// TODO: show warning about blocked signin
 		http.Redirect(w, r, "/signin", http.StatusFound)
 		return
 	}
@@ -74,7 +76,7 @@ func (u *Users) SignIn(w http.ResponseWriter, r *http.Request) {
 	u.Templates.SignIn.Execute(w, r, data)
 }
 
-func (u *Users) ProcessSignIn(w http.ResponseWriter, r *http.Request) {
+func (u *Users) DoSignIn(w http.ResponseWriter, r *http.Request) {
 	data := struct {
 		Email    string
 		Password string
@@ -84,14 +86,18 @@ func (u *Users) ProcessSignIn(w http.ResponseWriter, r *http.Request) {
 	}
 	user, err := u.UserService.Authenticate(r.Context(), data.Email, data.Password)
 	if err != nil {
-		log.Printf("ERROR: process sign in: %v\n", err.Error())
-		http.Error(w, "Internal error", http.StatusInternalServerError)
+		if errors.Is(err, models.ErrNotFound) {
+			err = errors.Public(err, "Wrong email and/or password")
+		} else {
+			log.Printf("ERROR: do sign in: %v\n", err.Error())
+		}
+		u.Templates.SignIn.Execute(w, r, data, err)
 		return
 	}
 
 	session, err := u.SessionService.Create(r.Context(), user.ID)
 	if err != nil {
-		log.Printf("ERROR: process sign in: %v\n", err.Error())
+		log.Printf("ERROR: do sign in: %v\n", err.Error())
 		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
@@ -108,17 +114,17 @@ func (u *Users) CurrentUser(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Current user: %s", user.Email)
 }
 
-func (u *Users) ProcessSignOut(w http.ResponseWriter, r *http.Request) {
+func (u *Users) DoSignOut(w http.ResponseWriter, r *http.Request) {
 	token, err := readCookie(r, CookieSessionName)
 	if err != nil {
-		log.Printf("ERROR: process sign out: %v\n", err.Error())
+		log.Printf("ERROR: do sign out: %v\n", err.Error())
 		http.Redirect(w, r, "/signin", http.StatusFound)
 		return
 	}
 
 	err = u.SessionService.Delete(r.Context(), token)
 	if err != nil {
-		log.Printf("ERROR: process sign out: %v\n", err.Error())
+		log.Printf("ERROR: do sign out: %v\n", err.Error())
 		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
@@ -136,7 +142,7 @@ func (u *Users) ForgetPassword(w http.ResponseWriter, r *http.Request) {
 	u.Templates.ForgotPassword.Execute(w, r, data)
 }
 
-func (u *Users) ProcessForgetPassword(w http.ResponseWriter, r *http.Request) {
+func (u *Users) DoForgetPassword(w http.ResponseWriter, r *http.Request) {
 	data := struct {
 		Email     string
 		ResetLink string
@@ -145,13 +151,16 @@ func (u *Users) ProcessForgetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 	pwReset, err := u.PasswordResetService.Create(r.Context(), data.Email)
 	if err != nil {
-		// TODO: what if the user does not exist?
-		log.Printf("ERROR: process forgot password: %v\n", err.Error())
-		http.Error(w, "Internal error", http.StatusInternalServerError)
+		if errors.Is(err, models.ErrNotFound) {
+			err = errors.Public(err, "Wrong email")
+		} else {
+			log.Printf("ERROR: do forgot password: %v\n", err.Error())
+		}
+		u.Templates.ForgotPassword.Execute(w, r, data, err)
 		return
 	}
-	// TODO: change to localhost
-	data.ResetLink = "http://192.168.1.2:3000/reset-password?token=" + pwReset.Token
+
+	data.ResetLink = "http://localhost:3000/reset-password?token=" + pwReset.Token
 	// TODO: here should be the emailing part
 
 	u.Templates.CheckYourEmail.Execute(w, r, data)
@@ -166,7 +175,7 @@ func (u *Users) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	u.Templates.ResetPassword.Execute(w, r, data)
 }
 
-func (u *Users) ProcessResetPassword(w http.ResponseWriter, r *http.Request) {
+func (u *Users) DoResetPassword(w http.ResponseWriter, r *http.Request) {
 	data := struct {
 		Token           string
 		Password        string
@@ -178,26 +187,28 @@ func (u *Users) ProcessResetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if data.Password != data.ConfirmPassword {
+		err := errors.Public(nil, "The given passwords do not match.")
+		u.Templates.ResetPassword.Execute(w, r, data, err)
 		return
 	}
 
 	user, err := u.PasswordResetService.Consume(r.Context(), data.Token)
 	if err != nil {
-		log.Printf("ERROR: process reset password: %v\n", err.Error())
+		log.Printf("ERROR: do reset password: %v\n", err.Error())
 		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
 
 	err = u.UserService.UpdatePassword(r.Context(), user.ID, data.Password)
 	if err != nil {
-		log.Printf("ERROR: process reset password: %v\n", err.Error())
+		log.Printf("ERROR: do reset password: %v\n", err.Error())
 		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
 
 	session, err := u.SessionService.Create(r.Context(), user.ID)
 	if err != nil {
-		log.Printf("ERROR: process reset password: %v\n", err.Error())
+		log.Printf("ERROR: do reset password: %v\n", err.Error())
 		http.Redirect(w, r, "/signin", http.StatusFound)
 		return
 	}
@@ -214,7 +225,6 @@ func (u *UserMiddleware) SetUser(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token, err := readCookie(r, CookieSessionName)
 		if err != nil {
-			log.Printf("ERROR: set user: %v\n", err.Error())
 			handler.ServeHTTP(w, r)
 			return
 		}
