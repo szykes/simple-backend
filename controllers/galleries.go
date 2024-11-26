@@ -43,7 +43,7 @@ func (g *Galleries) Create(w http.ResponseWriter, r *http.Request) {
 		Title:  r.FormValue("title"),
 	}
 
-	gallery, err := g.GalleryService.Create(context.TODO(), data.Title, data.UserID)
+	gallery, err := g.GalleryService.Create(r.Context(), data.Title, data.UserID)
 	if err != nil {
 		g.Templates.New.Execute(w, r, data, err)
 		return
@@ -54,7 +54,7 @@ func (g *Galleries) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (g *Galleries) Show(w http.ResponseWriter, r *http.Request) {
-	gallery, err := g.galleryByID(context.Background(), w, r)
+	gallery, err := g.galleryByID(r.Context(), w, r)
 	if err != nil {
 		log.Printf("DEBUG: gallery show: %v\n", err.Error())
 		return
@@ -94,7 +94,7 @@ func (g *Galleries) Show(w http.ResponseWriter, r *http.Request) {
 }
 
 func (g *Galleries) Edit(w http.ResponseWriter, r *http.Request) {
-	gallery, err := g.galleryByID(context.Background(), w, r, userMustOwnGallery)
+	gallery, err := g.galleryByID(r.Context(), w, r, userMustOwnGallery)
 	if err != nil {
 		log.Printf("DEBUG: gallery edit: %v\n", err.Error())
 		return
@@ -131,14 +131,14 @@ func (g *Galleries) Edit(w http.ResponseWriter, r *http.Request) {
 }
 
 func (g *Galleries) Update(w http.ResponseWriter, r *http.Request) {
-	gallery, err := g.galleryByID(context.Background(), w, r, userMustOwnGallery)
+	gallery, err := g.galleryByID(r.Context(), w, r, userMustOwnGallery)
 	if err != nil {
 		log.Printf("DEBUG: gallery edit: %v\n", err.Error())
 		return
 	}
 
 	gallery.Title = r.FormValue("title")
-	err = g.GalleryService.Update(context.TODO(), gallery)
+	err = g.GalleryService.Update(r.Context(), gallery)
 	if err != nil {
 		log.Printf("ERROR: gallery update: %v\n", err.Error())
 		http.Error(w, "Internal error", http.StatusInternalServerError)
@@ -159,7 +159,7 @@ func (g *Galleries) Index(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user := custctx.User(r.Context())
-	galleries, err := g.GalleryService.ByUserID(context.TODO(), user.ID)
+	galleries, err := g.GalleryService.ByUserID(r.Context(), user.ID)
 	if err != nil {
 		log.Printf("ERROR: gallery index: %v\n", err.Error())
 		http.Error(w, "Internal error", http.StatusInternalServerError)
@@ -177,13 +177,13 @@ func (g *Galleries) Index(w http.ResponseWriter, r *http.Request) {
 }
 
 func (g *Galleries) Delete(w http.ResponseWriter, r *http.Request) {
-	gallery, err := g.galleryByID(context.Background(), w, r, userMustOwnGallery)
+	gallery, err := g.galleryByID(r.Context(), w, r, userMustOwnGallery)
 	if err != nil {
 		log.Printf("DEBUG: gallery delete: %v\n", err.Error())
 		return
 	}
 
-	err = g.GalleryService.Delete(context.TODO(), gallery.ID)
+	err = g.GalleryService.Delete(r.Context(), gallery.ID)
 	if err != nil {
 		log.Printf("ERROR: gallery delete: %v\n", err.Error())
 		http.Error(w, "Internal error", http.StatusInternalServerError)
@@ -218,7 +218,7 @@ func (g *Galleries) Image(w http.ResponseWriter, r *http.Request) {
 }
 
 func (g *Galleries) UploadImage(w http.ResponseWriter, r *http.Request) {
-	gallery, err := g.galleryByID(context.TODO(), w, r, userMustOwnGallery)
+	gallery, err := g.galleryByID(r.Context(), w, r, userMustOwnGallery)
 	if err != nil {
 		log.Printf("DEBUG: upload image: %v\n", err.Error())
 		return
@@ -260,7 +260,7 @@ func (g *Galleries) UploadImage(w http.ResponseWriter, r *http.Request) {
 
 func (g *Galleries) DeleteImage(w http.ResponseWriter, r *http.Request) {
 	filename := g.filename(r)
-	gallery, err := g.galleryByID(context.TODO(), w, r, userMustOwnGallery)
+	gallery, err := g.galleryByID(r.Context(), w, r, userMustOwnGallery)
 	if err != nil {
 		log.Printf("DEBUG: delete image: %v\n", err.Error())
 		return

@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -35,7 +34,6 @@ func (u *Users) New(w http.ResponseWriter, r *http.Request) {
 	u.Templates.New.Execute(w, r, data)
 }
 
-// TODO: introduce conxtext
 func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 	newUser := models.NewUser{
 		Name:            r.FormValue("name"),
@@ -43,7 +41,7 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 		Password:        r.FormValue("password"),
 		ConfirmPassword: r.FormValue("confirmPassword"),
 	}
-	user, err := u.UserService.Create(context.Background(), newUser)
+	user, err := u.UserService.Create(r.Context(), newUser)
 	if err != nil {
 		if errors.Is(err, models.ErrEmailTaken) {
 			err = errors.Public(err, "That email address is already associated with an account.")
@@ -54,7 +52,7 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, err := u.SessionService.Create(context.Background(), user.ID)
+	session, err := u.SessionService.Create(r.Context(), user.ID)
 	if err != nil {
 		log.Printf("DEBUG: create user: %v\n", err.Error())
 		// TODO: show warning about blocked signin
@@ -84,14 +82,14 @@ func (u *Users) ProcessSignIn(w http.ResponseWriter, r *http.Request) {
 		Email:    r.FormValue("email"),
 		Password: r.FormValue("password"),
 	}
-	user, err := u.UserService.Authenticate(context.Background(), data.Email, data.Password)
+	user, err := u.UserService.Authenticate(r.Context(), data.Email, data.Password)
 	if err != nil {
 		log.Printf("ERROR: process sign in: %v\n", err.Error())
 		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
 
-	session, err := u.SessionService.Create(context.Background(), user.ID)
+	session, err := u.SessionService.Create(r.Context(), user.ID)
 	if err != nil {
 		log.Printf("ERROR: process sign in: %v\n", err.Error())
 		http.Error(w, "Internal error", http.StatusInternalServerError)
@@ -118,7 +116,7 @@ func (u *Users) ProcessSignOut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = u.SessionService.Delete(context.Background(), token)
+	err = u.SessionService.Delete(r.Context(), token)
 	if err != nil {
 		log.Printf("ERROR: process sign out: %v\n", err.Error())
 		http.Error(w, "Internal error", http.StatusInternalServerError)
@@ -145,7 +143,7 @@ func (u *Users) ProcessForgetPassword(w http.ResponseWriter, r *http.Request) {
 	}{
 		Email: r.FormValue("email"),
 	}
-	pwReset, err := u.PasswordResetService.Create(context.Background(), data.Email)
+	pwReset, err := u.PasswordResetService.Create(r.Context(), data.Email)
 	if err != nil {
 		// TODO: what if the user does not exist?
 		log.Printf("ERROR: process forgot password: %v\n", err.Error())
@@ -183,21 +181,21 @@ func (u *Users) ProcessResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := u.PasswordResetService.Consume(context.Background(), data.Token)
+	user, err := u.PasswordResetService.Consume(r.Context(), data.Token)
 	if err != nil {
 		log.Printf("ERROR: process reset password: %v\n", err.Error())
 		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
 
-	err = u.UserService.UpdatePassword(context.Background(), user.ID, data.Password)
+	err = u.UserService.UpdatePassword(r.Context(), user.ID, data.Password)
 	if err != nil {
 		log.Printf("ERROR: process reset password: %v\n", err.Error())
 		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
 
-	session, err := u.SessionService.Create(context.Background(), user.ID)
+	session, err := u.SessionService.Create(r.Context(), user.ID)
 	if err != nil {
 		log.Printf("ERROR: process reset password: %v\n", err.Error())
 		http.Redirect(w, r, "/signin", http.StatusFound)
@@ -221,7 +219,7 @@ func (u *UserMiddleware) SetUser(handler http.Handler) http.Handler {
 			return
 		}
 
-		user, err := u.SessionService.User(context.Background(), token)
+		user, err := u.SessionService.User(r.Context(), token)
 		if err != nil {
 			log.Printf("ERROR: set user: %v\n", err.Error())
 			handler.ServeHTTP(w, r)
