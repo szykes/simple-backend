@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/szykes/simple-backend/custctx"
@@ -48,15 +49,14 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 			err = errors.Public(err, "That email address is already associated with an account.")
 		}
 		u.Templates.New.Execute(w, r, newUser, err)
-		// TODO: proper error logging and don't use fmt.Println
-		// fmt.Println(err)
-		// http.Error(w, "Internal error", http.StatusInternalServerError)
+		log.Printf("ERROR: create user: %v\n", err.Error())
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	session, err := u.SessionService.Create(context.Background(), user.ID)
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("DEBUG: create user: %v\n", err.Error())
 		// TODO: show warning about blocked signin
 		http.Redirect(w, r, "/signin", http.StatusFound)
 		return
@@ -86,14 +86,14 @@ func (u *Users) ProcessSignIn(w http.ResponseWriter, r *http.Request) {
 	}
 	user, err := u.UserService.Authenticate(context.Background(), data.Email, data.Password)
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("ERROR: process sign in: %v\n", err.Error())
 		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
 
 	session, err := u.SessionService.Create(context.Background(), user.ID)
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("ERROR: process sign in: %v\n", err.Error())
 		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
@@ -113,14 +113,14 @@ func (u *Users) CurrentUser(w http.ResponseWriter, r *http.Request) {
 func (u *Users) ProcessSignOut(w http.ResponseWriter, r *http.Request) {
 	token, err := readCookie(r, CookieSessionName)
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("ERROR: process sign out: %v\n", err.Error())
 		http.Redirect(w, r, "/signin", http.StatusFound)
 		return
 	}
 
 	err = u.SessionService.Delete(context.Background(), token)
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("ERROR: process sign out: %v\n", err.Error())
 		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
@@ -148,7 +148,7 @@ func (u *Users) ProcessForgetPassword(w http.ResponseWriter, r *http.Request) {
 	pwReset, err := u.PasswordResetService.Create(context.Background(), data.Email)
 	if err != nil {
 		// TODO: what if the user does not exist?
-		fmt.Println(err)
+		log.Printf("ERROR: process forgot password: %v\n", err.Error())
 		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
@@ -157,12 +157,6 @@ func (u *Users) ProcessForgetPassword(w http.ResponseWriter, r *http.Request) {
 	// TODO: here should be the emailing part
 
 	u.Templates.CheckYourEmail.Execute(w, r, data)
-	// 	fmt.Fprint(w, `
-	// Subject: Reset your password
-	// To: `+data.Email+`
-	// Body: <p>To reset your passowrd, please visit the following link: <a href"`+pwReset+`">`+pwReset+`</a></p>`)
-	// TODO: print this info
-
 }
 
 func (u *Users) ResetPassword(w http.ResponseWriter, r *http.Request) {
@@ -185,29 +179,27 @@ func (u *Users) ProcessResetPassword(w http.ResponseWriter, r *http.Request) {
 		ConfirmPassword: r.FormValue("confirmPassword"),
 	}
 
-	// TODO: is this ok?
 	if data.Password != data.ConfirmPassword {
-		fmt.Println("reset password: mismatching password")
 		return
 	}
 
 	user, err := u.PasswordResetService.Consume(context.Background(), data.Token)
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("ERROR: process reset password: %v\n", err.Error())
 		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
 
 	err = u.UserService.UpdatePassword(context.Background(), user.ID, data.Password)
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("ERROR: process reset password: %v\n", err.Error())
 		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
 
 	session, err := u.SessionService.Create(context.Background(), user.ID)
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("ERROR: process reset password: %v\n", err.Error())
 		http.Redirect(w, r, "/signin", http.StatusFound)
 		return
 	}
@@ -224,13 +216,14 @@ func (u *UserMiddleware) SetUser(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token, err := readCookie(r, CookieSessionName)
 		if err != nil {
+			log.Printf("ERROR: set user: %v\n", err.Error())
 			handler.ServeHTTP(w, r)
 			return
 		}
 
 		user, err := u.SessionService.User(context.Background(), token)
 		if err != nil {
-			fmt.Println(err)
+			log.Printf("ERROR: set user: %v\n", err.Error())
 			handler.ServeHTTP(w, r)
 			return
 		}

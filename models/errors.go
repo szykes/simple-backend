@@ -10,8 +10,9 @@ import (
 )
 
 var (
-	ErrNotFound   = errors.New("models: no resource is found")
-	ErrEmailTaken = errors.New("models: email address is already in use")
+	ErrNotFound   = errors.New("no resource is found")
+	ErrEmailTaken = errors.New("email address is already in use")
+	ErrPwMismatch = errors.New("mismatching password")
 )
 
 type FileError struct {
@@ -26,12 +27,12 @@ func checkContentType(r io.ReadSeeker, allowedTypes []string) error {
 	testBytes := make([]byte, 512)
 	_, err := r.Read(testBytes)
 	if err != nil {
-		return fmt.Errorf("checking content type: %w", err)
+		return errors.Wrap(err, "checking content type")
 	}
 
 	_, err = r.Seek(io.SeekStart, 0)
 	if err != nil {
-		return fmt.Errorf("checking content type: %w", err)
+		return errors.Wrap(err, "checking content type")
 	}
 
 	contentType := http.DetectContentType(testBytes)

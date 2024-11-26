@@ -3,7 +3,6 @@ package models
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"strings"
 
 	"github.com/jackc/pgerrcode"
@@ -36,13 +35,12 @@ func (u *UserService) Create(ctx context.Context, newUser NewUser) (*User, error
 	user.Email = strings.ToLower(newUser.Email)
 
 	if newUser.Password != newUser.ConfirmPassword {
-		// TODO: handling error correctly
-		return nil, fmt.Errorf("create user: mismatching password")
+		return nil, errors.Wrap(ErrPwMismatch, "create user")
 	}
 
 	hashedBytes, err := bcrypt.GenerateFromPassword([]byte(newUser.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, fmt.Errorf("create user: %w", err)
+		return nil, errors.Wrap(err, "create user")
 	}
 	user.PasswordHash = string(hashedBytes)
 
@@ -56,10 +54,10 @@ func (u *UserService) Create(ctx context.Context, newUser NewUser) (*User, error
 		var pgError *pgconn.PgError
 		if errors.As(err, &pgError) {
 			if pgError.Code == pgerrcode.UniqueViolation {
-				return nil, ErrEmailTaken
+				return nil, errors.Wrap(ErrEmailTaken, "create user")
 			}
 		}
-		return nil, fmt.Errorf("create user: %w", err)
+		return nil, errors.Wrap(err, "create user")
 	}
 
 	return &user, nil
@@ -77,13 +75,12 @@ func (u *UserService) Authenticate(ctx context.Context, email, password string) 
 		email)
 	err := row.Scan(&user.ID, &user.PasswordHash)
 	if err != nil {
-		return nil, fmt.Errorf("authenticate: %w", err)
+		return nil, errors.Wrap(err, "authenticate user")
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
 	if err != nil {
-		// TODO: implement a proper error propagating solution
-		return nil, fmt.Errorf("authenticate: %w", err)
+		return nil, errors.Wrap(err, "authenticate user")
 	}
 	return &user, nil
 }
@@ -91,7 +88,7 @@ func (u *UserService) Authenticate(ctx context.Context, email, password string) 
 func (u *UserService) UpdatePassword(ctx context.Context, userID int, password string) error {
 	hashedBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return fmt.Errorf("update password: %w", err)
+		return errors.Wrap(err, "update password")
 	}
 	passwordHash := string(hashedBytes)
 
@@ -100,7 +97,7 @@ func (u *UserService) UpdatePassword(ctx context.Context, userID int, password s
     SET password_hash = $2
     WHERE id = $1;`, userID, passwordHash)
 	if err != nil {
-		return fmt.Errorf("update password: %w", err)
+		return errors.Wrap(err, "update password")
 	}
 
 	return nil

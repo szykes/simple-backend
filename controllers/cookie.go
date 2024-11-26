@@ -1,8 +1,9 @@
 package controllers
 
 import (
-	"fmt"
 	"net/http"
+
+	"github.com/szykes/simple-backend/errors"
 )
 
 const CookieSessionName = "session"
@@ -24,7 +25,7 @@ func setCookie(w http.ResponseWriter, name, value string) {
 func readCookie(r *http.Request, name string) (string, error) {
 	cookie, err := r.Cookie(name)
 	if err != nil {
-		return "", fmt.Errorf("read cookie '%s': %w", name, err)
+		return "", errors.Wrap(err, "read cookie")
 	}
 	return cookie.Value, nil
 }

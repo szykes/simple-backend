@@ -2,7 +2,6 @@ package views
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"html/template"
 	"io"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/gorilla/csrf"
 	"github.com/szykes/simple-backend/custctx"
+	"github.com/szykes/simple-backend/errors"
 	"github.com/szykes/simple-backend/models"
 )
 
@@ -39,7 +39,6 @@ func MustParseFS(fs fs.FS, patterns ...string) *Template {
 
 	t, err := t.ParseFS(fs, patterns...)
 	if err != nil {
-		// TODO: eliminate panic
 		panic(err)
 	}
 	return &Template{
@@ -50,7 +49,7 @@ func MustParseFS(fs fs.FS, patterns ...string) *Template {
 func (t *Template) Execute(w http.ResponseWriter, r *http.Request, data any, errs ...error) {
 	tpl, err := t.htmlTemplate.Clone()
 	if err != nil {
-		log.Printf("cloning template: %v", err)
+		log.Printf("ERROR: execute template: failed to clone template: %v\n", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -68,7 +67,7 @@ func (t *Template) Execute(w http.ResponseWriter, r *http.Request, data any, err
 				if errors.As(err, &pubErr) {
 					errMsgs = append(errMsgs, pubErr.Public())
 				} else {
-					log.Println(err)
+					log.Printf("ERROR: execute template: error happened: %v\n", err)
 					errMsgs = append(errMsgs, "Internal error.")
 				}
 			}
@@ -77,16 +76,17 @@ func (t *Template) Execute(w http.ResponseWriter, r *http.Request, data any, err
 	})
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
 	var buf bytes.Buffer
 	err = tpl.Execute(&buf, data)
 	if err != err {
-		log.Printf("executing template: %v", err)
+		log.Printf("ERROR: execute template: failed to execute: %v\n", err)
 		http.Error(w, "Failed to execute template", http.StatusInternalServerError)
 		return
 	}
 	_, err = io.Copy(w, &buf)
 	if err != nil {
-		log.Printf("writing page: %v", err)
+		log.Printf("ERROR: execute template: failed to copy: %v\n", err)
 		return
 	}
 }

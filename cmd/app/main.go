@@ -120,6 +120,9 @@ func main() {
 		})
 	})
 
+	// assetsHandler := http.FileServer(http.Dir("assets"))
+	// r.Get("/assets/*", http.StripPrefix("/assets", assetsHandler).ServeHTTP)
+
 	r.Get("/joke ", func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusTeapot), http.StatusTeapot)
 	})

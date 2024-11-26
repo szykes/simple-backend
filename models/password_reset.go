@@ -5,10 +5,10 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/base64"
-	"fmt"
 	"strings"
 	"time"
 
+	"github.com/szykes/simple-backend/errors"
 	"github.com/szykes/simple-backend/rand"
 )
 
@@ -42,13 +42,13 @@ func (p *PasswordResetService) Create(ctx context.Context, email string) (*Passw
 	err := row.Scan(&userID)
 	if err != nil {
 		// TODO: what if the user does not exist?
-		return nil, fmt.Errorf("create: %w", err)
+		return nil, errors.Wrap(err, "pwd reset create")
 	}
 
 	bytesPerToken := max(p.BytesPerToken, MinBytesPerToken)
 	token, err := rand.String(bytesPerToken)
 	if err != nil {
-		return nil, fmt.Errorf("create: %w", err)
+		return nil, errors.Wrap(err, "pwd reset create")
 	}
 
 	duration := p.Duration
@@ -70,7 +70,7 @@ func (p *PasswordResetService) Create(ctx context.Context, email string) (*Passw
 		pwReset.UserID, pwReset.TokenHash, pwReset.ExpiresAt)
 	err = row.Scan(&pwReset.ID)
 	if err != nil {
-		return nil, fmt.Errorf("create: %w", err)
+		return nil, errors.Wrap(err, "pwd reset create")
 	}
 
 	return &pwReset, nil
@@ -92,11 +92,11 @@ func (p *PasswordResetService) Consume(ctx context.Context, token string) (*User
 		tokenHash)
 	err := row.Scan(&pwReset.ID, &pwReset.ExpiresAt, &user.ID, &user.Email, &user.PasswordHash)
 	if err != nil {
-		return nil, fmt.Errorf("consume: %w", err)
+		return nil, errors.Wrap(err, "pwd reset consume")
 	}
 
 	if time.Now().After(pwReset.ExpiresAt) {
-		return nil, fmt.Errorf("token expired: %v", token)
+		return nil, errors.Wrap(errors.New("token expired"), "pwd reset consume", "token", token)
 	}
 
 	_, err = p.DB.ExecContext(ctx, `
@@ -104,7 +104,7 @@ func (p *PasswordResetService) Consume(ctx context.Context, token string) (*User
     WHERE id = $1;`,
 		pwReset.ID)
 	if err != nil {
-		return nil, fmt.Errorf("consume: %w", err)
+		return nil, errors.Wrap(err, "pwd reset consume")
 	}
 
 	return &user, nil

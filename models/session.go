@@ -5,8 +5,8 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/base64"
-	"fmt"
 
+	"github.com/szykes/simple-backend/errors"
 	"github.com/szykes/simple-backend/rand"
 )
 
@@ -28,7 +28,7 @@ func (s *SessionService) Create(ctx context.Context, userID int) (*Session, erro
 	bytesPerToken := max(s.BytesPerToken, MinBytesPerToken)
 	token, err := rand.String(bytesPerToken)
 	if err != nil {
-		return nil, fmt.Errorf("create: %w", err)
+		return nil, errors.Wrap(err, "create session", "user ID", userID)
 	}
 	session := Session{
 		UserID:    userID,
@@ -44,7 +44,7 @@ func (s *SessionService) Create(ctx context.Context, userID int) (*Session, erro
 		session.UserID, session.TokenHash)
 	err = row.Scan(&session.ID)
 	if err != nil {
-		return nil, fmt.Errorf("create session: %w", err)
+		return nil, errors.Wrap(err, "create session", "user ID", userID)
 	}
 
 	return &session, nil
@@ -63,7 +63,7 @@ func (s *SessionService) User(ctx context.Context, token string) (*User, error) 
 	err := row.Scan(&user.ID, &user.Name, &user.Email, &user.PasswordHash)
 	// TODO: implement no row case
 	if err != nil {
-		return nil, fmt.Errorf("user: %w", err)
+		return nil, errors.Wrap(err, "create user session")
 	}
 
 	return &user, nil
@@ -77,7 +77,7 @@ func (s *SessionService) Delete(ctx context.Context, token string) error {
     WHERE token_hash = $1`,
 		tokenHash)
 	if err != nil {
-		return fmt.Errorf("delete: %w", err)
+		return errors.Wrap(err, "delete session")
 	}
 	return nil
 }
