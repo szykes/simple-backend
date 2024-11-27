@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/gorilla/csrf"
 
+	"github.com/szykes/simple-backend/config"
 	"github.com/szykes/simple-backend/controllers"
 	"github.com/szykes/simple-backend/migrations"
 	"github.com/szykes/simple-backend/models"
@@ -17,9 +18,13 @@ import (
 )
 
 func main() {
+	cfg, err := config.LoadDotEnvConfig()
+	if err != nil {
+		panic(err)
+	}
+
 	// setup DB
-	cfg := models.DefaultPostgresCfg()
-	db, err := models.Open(cfg)
+	db, err := models.Open(cfg.PSQL)
 	if err != nil {
 		panic(err)
 	}
@@ -49,8 +54,7 @@ func main() {
 		SessionService: &sessionService,
 	}
 
-	csrfKey := []byte("ashlKfD8U8ui3xAfLk78Jh10AslKuHbH")
-	csrfMw := csrf.Protect(csrfKey, csrf.Path("/"), csrf.Secure(false))
+	csrfMw := csrf.Protect([]byte(cfg.CSRF.Key), csrf.Path("/"), csrf.Secure(cfg.CSRF.Secure))
 
 	// setup contollers
 	users := controllers.Users{
@@ -76,7 +80,7 @@ func main() {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Logger)
-	r.Use(middleware.Timeout(60 * time.Second))
+	r.Use(middleware.Timeout(10 * time.Second))
 	r.Use(csrfMw)
 	r.Use(userMw.SetUser)
 
@@ -132,8 +136,9 @@ func main() {
 	})
 
 	// start webserver
-	fmt.Println("Starting server on :3000")
-	err = http.ListenAndServe(":3000", r)
+	address := cfg.Server.Host + ":" + cfg.Server.Port
+	log.Printf("INFO: start to listen on: %v\n", address)
+	err = http.ListenAndServe(address, r)
 	if err != nil {
 		panic(err)
 	}

@@ -3,8 +3,6 @@ services:
     image: postgres:17.1-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: some-pass
-      POSTGRES_DB: szykes
-    ports:
-      - 5432:5432
+      POSTGRES_USER: ${PSQL_USER}
+      POSTGRES_PASSWORD: ${PSQL_PASSWORD}
+      POSTGRES_DB: ${PSQL_DATABASE}

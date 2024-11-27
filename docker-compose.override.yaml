@@ -1,0 +1,4 @@
+services:
+  db:
+    ports:
+      - ${PSQL_PORT}:${PSQL_PORT}
