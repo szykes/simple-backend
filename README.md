@@ -39,7 +39,7 @@ The `goose` is a pretty good tool to support SQL migration in go. It has standal
 go install github.com/pressly/goose/v3/cmd/goose@v3
 ```
 
-However, the web app does not require to be installed the `goose`. It is enough just import and use it from web app, so the web app holds all the needed functionalities.
+However, the web app does not require the installed `goose`. It is enough just import and use it from web app, so the web app holds all the needed functionalities.
 
 You need to have the installed binary, if you want to add migration file. You can do it with following steps.
 This creates the migration file, but the file name contains date that can be an issue:
