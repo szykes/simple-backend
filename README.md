@@ -3,14 +3,14 @@
 ## What it does
 
 This is a simple gallery web application with the following features:
-- **User Handling**: Sign up, sign in, and forgot password
+- **User Handling**: Sign up, sign in, sign out, and forgot password
 - **Session Handling**: Using cookies
 - **Gallery Handling**: Creating, updating, and deleting
 - **Image Handling**: Showing, uploading, and deleting
 
 ## How it does on high-level
 
-The web app uses the SSR (Server-Side Rendering), so the we app generates the content to broeswer on the backend side.
+The web app uses the SSR (Server-Side Rendering), so the we app generates the content to browser on the backend side.
 
 The architecture is the MVC (Model View Controller). There is no need to apply more complex architecture like Ports & Adatpers, or Clean Architectures.
 
@@ -22,6 +22,11 @@ The MVC implemented this way (pretty obviuos):
 - **Model** is under `models/`, this contains the SQL queries. The SQL table definition is under `migrations/`.
 - **View** is under `views/`, this contains the content handling. The HTML templates are under `templates/`.
 - **Controller** is under `controllers/`.
+
+It is protected againts the CSRF attack.
+
+The password hashing uses `bcrypt`.
+The tokens are created by cryptographically secure pseudorandom number generator and hashed by `sha256`.
 
 ### SQL migration
 
